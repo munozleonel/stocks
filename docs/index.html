@@ -7,142 +7,140 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:#0a0c0f; --surface:#111318; --surface2:#181c23;
-    --border:#1e2530; --accent:#00e5a0; --text:#e8eaf0;
-    --muted:#5a6278; --up:#00e5a0; --down:#ff4d6a;
-  }
+  :root{--bg:#0a0c0f;--surface:#111318;--surface2:#181c23;--border:#1e2530;--accent:#00e5a0;--text:#e8eaf0;--muted:#5a6278;--up:#00e5a0;--down:#ff4d6a;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-  body::before{content:'';position:fixed;inset:0;
-    background-image:linear-gradient(rgba(0,229,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.025) 1px,transparent 1px);
-    background-size:40px 40px;pointer-events:none;z-index:0;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
   .app{position:relative;z-index:1;}
 
-  /* HEADER */
-  header{border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;
-    justify-content:space-between;background:rgba(11,13,16,.92);backdrop-filter:blur(12px);
-    position:sticky;top:0;z-index:100;gap:16px;flex-wrap:wrap;}
+  /* ── HEADER ── */
+  header{border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;background:rgba(11,13,16,.94);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap;}
   .logo{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;letter-spacing:3px;color:var(--accent);}
   .logo em{color:var(--muted);font-style:normal;}
-  .header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-  .total-badge{font-family:'Space Mono',monospace;font-size:12px;background:var(--surface2);
-    border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--muted);}
-  .total-badge strong{color:var(--accent);font-size:15px;}
-  .updated-badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.5px;
-    padding:4px 10px;border-radius:20px;border:1px solid rgba(0,229,160,.3);
-    color:#00e5a0;background:rgba(0,229,160,.07);}
-  .fx-badge{display:flex;align-items:center;gap:8px;background:var(--surface2);
-    border:1px solid var(--border);border-radius:8px;padding:7px 14px;}
-  .fx-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-  #currencySelect{background:transparent;border:none;color:var(--accent);font-family:'Space Mono',monospace;
-    font-size:13px;font-weight:700;cursor:pointer;outline:none;appearance:none;}
-  #currencySelect option{background:var(--surface2);color:var(--text);}
+  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .hbadge{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 13px;}
+  .hbadge-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+  .hbadge strong{color:var(--accent);font-family:'Space Mono',monospace;font-size:15px;}
+  .hselect{background:transparent;border:none;color:var(--accent);font-family:'Space Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;outline:none;appearance:none;}
+  .hselect option{background:var(--surface2);color:var(--text);}
+  .updated-badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.5px;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,229,160,.3);color:#00e5a0;background:rgba(0,229,160,.07);}
 
-  /* LOADER */
-  #loadingOverlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
-    align-items:center;justify-content:center;z-index:999;gap:18px;transition:opacity .4s;}
-  .loader-ring{width:52px;height:52px;border:3px solid var(--border);border-top-color:var(--accent);
-    border-radius:50%;animation:spin .75s linear infinite;}
+  /* ── LOADER ── */
+  #loadingOverlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:18px;transition:opacity .4s;}
+  .loader-ring{width:52px;height:52px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loader-bar-wrap{width:260px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
   .loader-bar{height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width .25s ease;}
   .loader-status{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;}
 
-  /* MAIN */
-  .main{padding:28px 32px;max-width:1640px;margin:0 auto;}
+  /* ── MAIN ── */
+  .main{padding:24px 28px;max-width:1680px;margin:0 auto;}
 
-  /* PIE */
-  .pie-section{margin-bottom:36px;display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start;}
-  .pie-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;overflow:hidden;}
-  .pie-card::after{content:'';position:absolute;top:-60px;right:-60px;width:160px;height:160px;
-    background:radial-gradient(circle,rgba(0,229,160,.06) 0%,transparent 70%);pointer-events:none;}
-  .section-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
-  .pie-wrap{position:relative;height:260px;}
-  .legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;}
-  .legend-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);
-    border-radius:8px;padding:7px 11px;cursor:pointer;transition:border-color .18s,transform .15s;}
+  /* ── PIE ── */
+  .pie-section{margin-bottom:32px;display:grid;grid-template-columns:320px 1fr;gap:22px;align-items:start;}
+  .pie-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;position:relative;overflow:hidden;}
+  .pie-card::after{content:'';position:absolute;top:-60px;right:-60px;width:160px;height:160px;background:radial-gradient(circle,rgba(0,229,160,.06) 0%,transparent 70%);pointer-events:none;}
+  .section-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+  .pie-wrap{position:relative;height:250px;}
+  .legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;}
+  .legend-item{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;transition:border-color .18s,transform .15s;}
   .legend-item:hover{border-color:var(--accent);transform:translateY(-1px);}
-  .legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+  .legend-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0;}
   .legend-sym{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text);}
   .legend-pct{font-size:10px;color:var(--muted);margin-left:auto;font-family:'Space Mono',monospace;}
 
-  /* CARDS */
-  .stocks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(500px,1fr));gap:18px;}
-  .stock-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;
-    transition:border-color .2s,transform .2s,box-shadow .2s;animation:fadeUp .4s ease both;}
-  .stock-card:hover{border-color:rgba(0,229,160,.35);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  /* ── REGION GROUPS ── */
+  .region-block{margin-bottom:28px;}
+  .region-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .region-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+  .region-line{flex:1;height:1px;background:var(--border);}
+  .region-count{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;}
 
-  .card-header{padding:16px 20px 12px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);}
-  .card-left{display:flex;align-items:center;gap:12px;}
-  .ticker-badge{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;
-    font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
-  .stock-name{font-size:12px;color:var(--muted);margin-top:3px;max-width:195px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cur-tag{font-size:9px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;
-    padding:2px 5px;color:var(--muted);font-family:'Space Mono',monospace;}
+  /* ── REGION COLORS ── */
+  .region-dot-Australia{background:#38bdf8;}
+  .region-dot-China{background:#f87171;}
+  .region-dot-Crypto{background:#f9c846;}
+  .region-dot-Europe{background:#a78bfa;}
+  .region-dot-US{background:#00e5a0;}
+
+  /* ── STOCK CARDS ── */
+  .stocks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(490px,1fr));gap:16px;}
+  .stock-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s,transform .2s,box-shadow .2s;animation:fadeUp .4s ease both;}
+  .stock-card:hover{border-color:rgba(0,229,160,.35);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  .card-header{padding:14px 18px 11px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .card-left{display:flex;align-items:center;gap:10px;}
+  .ticker-badge{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 9px;font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+  .card-meta{display:flex;flex-direction:column;gap:3px;}
+  .stock-name{font-size:12px;color:var(--muted);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-tags{display:flex;gap:5px;align-items:center;}
+  .cur-tag,.region-tag{font-size:9px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--muted);font-family:'Space Mono',monospace;}
+  .region-tag{border-color:rgba(255,255,255,0.1);}
+  .region-tag-Australia{color:#38bdf8;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08);}
+  .region-tag-China{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.08);}
+  .region-tag-Crypto{color:#f9c846;border-color:rgba(249,200,70,.3);background:rgba(249,200,70,.08);}
+  .region-tag-Europe{color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08);}
+  .region-tag-US{color:#00e5a0;border-color:rgba(0,229,160,.3);background:rgba(0,229,160,.08);}
+
   .price-block{text-align:right;}
   .current-price{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:var(--text);}
   .price-change{font-family:'Space Mono',monospace;font-size:11px;margin-top:2px;}
   .price-change.up{color:var(--up);}.price-change.down{color:var(--down);}
 
-  .card-stats{padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;border-bottom:1px solid var(--border);}
+  .card-stats{padding:10px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;border-bottom:1px solid var(--border);}
   .stat{display:flex;flex-direction:column;gap:3px;}
   .stat-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
   .stat-value{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--text);}
   .stat-value.profit{color:var(--up);}.stat-value.loss{color:var(--down);}
 
-  .chart-section{padding:12px 20px 16px;}
-  .chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .chart-section{padding:10px 18px 14px;}
+  .chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
   .chart-tabs{display:flex;gap:4px;}
-  .tab{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 10px;
-    border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+  .tab{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
   .tab:hover{border-color:var(--accent);color:var(--accent);}
   .tab.active{background:var(--accent);border-color:var(--accent);color:#0a0c0f;font-weight:700;}
-  .hl-display{display:flex;gap:14px;}
+  .hl-display{display:flex;gap:12px;}
   .hl-item{display:flex;flex-direction:column;gap:1px;align-items:flex-end;}
   .hl-label{font-family:'Space Mono',monospace;color:var(--muted);font-size:8px;letter-spacing:1px;text-transform:uppercase;}
   .hl-val-h{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:#f9c846;}
   .hl-val-l{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:#818cf8;}
-  .chart-wrap{position:relative;height:140px;}
+  .chart-wrap{position:relative;height:135px;}
 
-  .error-state{text-align:center;padding:60px 20px;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);}
-  .error-state span{display:block;font-size:11px;margin-top:8px;color:#ff4d6a;}
-
-  @media(max-width:900px){
-    .pie-section{grid-template-columns:1fr;}
-    .stocks-grid{grid-template-columns:1fr;}
-    header{flex-direction:column;align-items:flex-start;}
-    .main{padding:16px;}
-  }
+  @media(max-width:900px){.pie-section{grid-template-columns:1fr;}.stocks-grid{grid-template-columns:1fr;}header{flex-direction:column;align-items:flex-start;}.main{padding:14px;}}
 </style>
 </head>
 <body>
 <div class="app">
-
 <div id="loadingOverlay">
   <div class="loader-ring"></div>
   <div class="loader-bar-wrap"><div class="loader-bar" id="loaderBar"></div></div>
   <div class="loader-status" id="loaderStatus">LOADING DATA</div>
 </div>
-
 <header>
   <div class="logo">MSP<em>/</em>PORTFOLIO</div>
   <div class="header-right">
-    <div class="total-badge">TOTAL VALUE&nbsp;&nbsp;<strong id="totalValueDisplay">—</strong></div>
-    <div class="updated-badge" id="updatedBadge">—</div>
-    <div class="fx-badge">
-      <span class="fx-label">DISPLAY</span>
-      <select id="currencySelect">
+    <div class="hbadge"><span class="hbadge-label">TOTAL VALUE</span><strong id="totalValueDisplay">—</strong></div>
+    <div class="hbadge">
+      <span class="hbadge-label">DURATION</span>
+      <select class="hselect" id="globalRange">
+        <option value="7D">7D</option>
+        <option value="3M">3M</option>
+        <option value="12M">12M</option>
+      </select>
+    </div>
+    <div class="hbadge">
+      <span class="hbadge-label">DISPLAY</span>
+      <select class="hselect" id="currencySelect">
         <option value="default">Default (native)</option>
         <option value="AUD">AUD 🇦🇺</option>
         <option value="USD">USD 🇺🇸</option>
         <option value="EUR">EUR 🇪🇺</option>
       </select>
     </div>
+    <div class="updated-badge" id="updatedBadge">—</div>
   </div>
 </header>
-
 <div class="main">
   <div class="pie-section">
     <div class="pie-card">
@@ -154,136 +152,96 @@
       <div class="legend-grid" id="legendGrid"></div>
     </div>
   </div>
-  <div class="stocks-grid" id="stocksGrid"></div>
+  <div id="stocksContainer"></div>
 </div>
 </div>
-
 <script>
-// ── Holdings metadata (no prices — those come from data.json) ─────────────────
-const HOLDINGS = [
-  {sym:'AAPL',   name:'Apple Inc.',                   shares:4,       avgCost:240.0000, currency:'USD'},
-  {sym:'AMZN',   name:'Amazon.com, Inc.',             shares:8.9087,  avgCost:2245.000, currency:'USD'},
-  {sym:'META',   name:'Meta Platforms, Inc.',         shares:15.0007, avgCost:189.5068, currency:'USD'},
-  {sym:'TSLA',   name:'Tesla, Inc.',                  shares:83.7728, avgCost:242.4156, currency:'USD'},
-  {sym:'BABA',   name:'Alibaba Group Holding',        shares:23.0000, avgCost:166.4426, currency:'USD'},
-  {sym:'COIN',   name:'Coinbase Global, Inc.',        shares:9.0000,  avgCost:166.2911, currency:'USD'},
-  {sym:'BA',     name:'Boeing Company (The)',         shares:6.0000,  avgCost:174.4433, currency:'USD'},
-  {sym:'CQQQ',   name:'Invesco China Technology ETF', shares:20.0000, avgCost:66.7000,  currency:'USD'},
-  {sym:'CRSR',   name:'Corsair Gaming, Inc.',         shares:36.9300, avgCost:36.0049,  currency:'USD'},
-  {sym:'MU',     name:'Micron Technology, Inc.',      shares:5.0000,  avgCost:59.3700,  currency:'USD'},
-  {sym:'NFLX',   name:'Netflix, Inc.',                shares:20.0000, avgCost:382.0000, currency:'USD'},
-  {sym:'UNH',    name:'UnitedHealth Group',           shares:4.0000,  avgCost:230.9125, currency:'USD'},
-  {sym:'V',      name:'Visa Inc.',                    shares:3.0000,  avgCost:209.2633, currency:'USD'},
-  {sym:'BRK-B',  name:'Berkshire Hathaway Inc.',      shares:2.0000,  avgCost:177.1200, currency:'USD'},
-  {sym:'CAP.PA', name:'Capgemini',                    shares:27.8578, avgCost:90.4557,  currency:'EUR'},
-  {sym:'A2M.AX', name:'A2 Milk Co.',                  shares:220.0,   avgCost:9.2684,   currency:'AUD'},
-  {sym:'NCK.AX', name:'Nick Scali Ltd.',              shares:155.0,   avgCost:6.5000,   currency:'AUD'},
-  {sym:'WBC.AX', name:'Westpac Banking Corp.',        shares:36.0,    avgCost:27.8000,  currency:'AUD'},
-  {sym:'VAS.AX', name:'Vanguard Aust Shares ETF',     shares:10.0,    avgCost:72.8500,  currency:'AUD'},
-  {sym:'ETH-AUD',name:'Ethereum',                     shares:1.12,    avgCost:1000.0,   currency:'AUD'},
-];
-
-// ── Runtime state ─────────────────────────────────────────────────────────────
-let DATA = null;   // populated from data.json
+// ── State ─────────────────────────────────────────────────────────────────────
+let DATA = null;
 let displayCurrency = 'default';
+let globalRange = '7D';
 const chartInstances = {};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const CSYM = {USD:'$', AUD:'A$', EUR:'€'};
-function fmt(v, c) {
-  if (v == null || isNaN(v)) return '—';
-  return (CSYM[c]||'') + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+const CSYM = {USD:'$',AUD:'A$',EUR:'€'};
+function fmt(v,c){if(v==null||isNaN(v))return'—';return(CSYM[c]||'')+v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtPct(p){if(p==null||isNaN(p))return'';return(p>=0?'+':'')+p.toFixed(2)+'%';}
+function getFX(from,to){
+  if(from===to)return 1;
+  const k=from+'_'+to;
+  return DATA.fx?.[k]??(from==='USD'&&to==='AUD'?1.55:from==='AUD'&&to==='USD'?0.645:from==='EUR'&&to==='AUD'?1.72:from==='AUD'&&to==='EUR'?0.58:from==='USD'&&to==='EUR'?0.92:from==='EUR'&&to==='USD'?1.087:1);
 }
-function fmtPct(p) {
-  if (p == null || isNaN(p)) return '';
-  return (p >= 0 ? '+' : '') + p.toFixed(2) + '%';
-}
-function getFX(from, to) {
-  if (from === to) return 1;
-  const key = from + '_' + to;
-  return DATA.fx?.[key] ?? (from==='USD'&&to==='AUD' ? 1.55 : from==='AUD'&&to==='USD' ? 0.645 :
-    from==='EUR'&&to==='AUD' ? 1.72 : from==='AUD'&&to==='EUR' ? 0.58 :
-    from==='USD'&&to==='EUR' ? 0.92 : from==='EUR'&&to==='USD' ? 1.08 : 1);
-}
+function relTime(date){const m=Math.round((Date.now()-date)/60000);if(m<2)return'just now';if(m<60)return m+'m ago';const h=Math.round(m/60);if(h<24)return h+'h ago';return Math.round(h/24)+'d ago';}
 
-const PAL=['#00e5a0','#0070f3','#ff6b35','#f9c846','#a78bfa','#38bdf8','#fb7185','#34d399',
-           '#fbbf24','#818cf8','#22d3ee','#e879f9','#4ade80','#f87171','#60a5fa','#facc15',
-           '#c084fc','#fb923c','#a3e635','#e2e8f0'];
-const gc = i => PAL[i % PAL.length];
+// Region ordering and colors
+const REGION_ORDER = ['Australia','China','Crypto','Europe','US'];
+const REGION_COLORS = {Australia:'#38bdf8',China:'#f87171',Crypto:'#f9c846',Europe:'#a78bfa',US:'#00e5a0'};
+
+const PAL=['#00e5a0','#0070f3','#ff6b35','#f9c846','#a78bfa','#38bdf8','#fb7185','#34d399','#fbbf24','#818cf8','#22d3ee','#e879f9','#4ade80','#f87171','#60a5fa','#facc15','#c084fc','#fb923c','#a3e635','#e2e8f0'];
+const gc=i=>PAL[i%PAL.length];
 
 // ── Candlestick plugin ────────────────────────────────────────────────────────
 Chart.register({
-  id: 'candlestick',
-  afterDatasetsDraw(chart) {
-    const ds = chart.data.datasets[0];
-    if (!ds?.ohlcData) return;
-    const {ctx, scales:{x,y}} = chart;
-    const data = ds.ohlcData;
-    const n = data.length;
-    if (!n) return;
-    const slotW = n>1 ? Math.abs(x.getPixelForValue(1)-x.getPixelForValue(0)) : 10;
-    const cw = Math.max(1.5, Math.min(14, slotW * 0.66));
-    const hw = cw / 2;
+  id:'candlestick',
+  afterDatasetsDraw(chart){
+    const ds=chart.data.datasets[0];
+    if(!ds?.ohlcData)return;
+    const{ctx,scales:{x,y}}=chart;
+    const data=ds.ohlcData,n=data.length;
+    if(!n)return;
+    const slotW=n>1?Math.abs(x.getPixelForValue(1)-x.getPixelForValue(0)):10;
+    const cw=Math.max(1.5,Math.min(14,slotW*.66)),hw=cw/2;
     ctx.save();
-    data.forEach((d, i) => {
-      const xp  = x.getPixelForValue(i);
-      const isUp = d.c >= d.o;
-      const col  = isUp ? '#00e5a0' : '#ff4d6a';
-      const bTop = Math.min(y.getPixelForValue(d.o), y.getPixelForValue(d.c));
-      const bH   = Math.max(1, Math.abs(y.getPixelForValue(d.c) - y.getPixelForValue(d.o)));
-      // Wick
-      ctx.strokeStyle = col; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(xp, y.getPixelForValue(d.h)); ctx.lineTo(xp, y.getPixelForValue(d.l)); ctx.stroke();
-      // Body
-      ctx.fillStyle = isUp ? 'rgba(0,229,160,0.85)' : 'rgba(255,77,106,0.85)';
-      ctx.fillRect(xp-hw, bTop, cw, bH);
-      ctx.strokeStyle = col; ctx.lineWidth = 0.5;
-      ctx.strokeRect(xp-hw, bTop, cw, bH);
+    data.forEach((d,i)=>{
+      const xp=x.getPixelForValue(i),isUp=d.c>=d.o,col=isUp?'#00e5a0':'#ff4d6a';
+      const bTop=Math.min(y.getPixelForValue(d.o),y.getPixelForValue(d.c));
+      const bH=Math.max(1,Math.abs(y.getPixelForValue(d.c)-y.getPixelForValue(d.o)));
+      ctx.strokeStyle=col;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(xp,y.getPixelForValue(d.h));ctx.lineTo(xp,y.getPixelForValue(d.l));ctx.stroke();
+      ctx.fillStyle=isUp?'rgba(0,229,160,0.85)':'rgba(255,77,106,0.85)';
+      ctx.fillRect(xp-hw,bTop,cw,bH);
+      ctx.strokeStyle=col;ctx.lineWidth=0.5;ctx.strokeRect(xp-hw,bTop,cw,bH);
     });
     ctx.restore();
   }
 });
 
 // ── Card builder ──────────────────────────────────────────────────────────────
-function createCard(h, idx) {
-  const el = document.createElement('div');
-  el.className = 'stock-card';
-  el.style.animationDelay = `${idx * 0.04}s`;
-  el.id = `card-${h.sym}`;
-  el.innerHTML = `
+function createCard(h,idx){
+  const el=document.createElement('div');
+  el.className='stock-card';el.style.animationDelay=idx*.04+'s';el.id='card-'+h.sym;
+  el.innerHTML=`
     <div class="card-header">
       <div class="card-left">
-        <div>
-          <div style="display:flex;align-items:center;gap:7px">
-            <div class="ticker-badge">${h.sym}</div>
-            <span class="cur-tag">${h.currency}</span>
-          </div>
+        <div class="ticker-badge">${h.sym}</div>
+        <div class="card-meta">
           <div class="stock-name">${h.name}</div>
+          <div class="card-tags">
+            <span class="cur-tag">${h.currency}</span>
+            <span class="region-tag region-tag-${h.region}">${h.region}</span>
+          </div>
         </div>
       </div>
       <div class="price-block">
         <div class="current-price" id="price-${h.sym}">—</div>
-        <div class="price-change"  id="change-${h.sym}">—</div>
+        <div class="price-change" id="change-${h.sym}">—</div>
       </div>
     </div>
     <div class="card-stats">
-      <div class="stat"><div class="stat-label">Shares Held</div>
-        <div class="stat-value">${h.shares.toLocaleString(undefined,{maximumFractionDigits:4})}</div></div>
-      <div class="stat"><div class="stat-label">Avg Cost</div>
-        <div class="stat-value" id="avgcost-${h.sym}">—</div></div>
-      <div class="stat"><div class="stat-label">P&amp;L</div>
-        <div class="stat-value" id="pnl-${h.sym}">—</div></div>
+      <div class="stat"><div class="stat-label">Shares Held</div><div class="stat-value">${h.shares.toLocaleString(undefined,{maximumFractionDigits:4})}</div></div>
+      <div class="stat"><div class="stat-label">Avg Cost</div><div class="stat-value" id="avgcost-${h.sym}">—</div></div>
+      <div class="stat"><div class="stat-label">P&amp;L</div><div class="stat-value" id="pnl-${h.sym}">—</div></div>
     </div>
     <div class="chart-section">
       <div class="chart-top">
         <div class="chart-tabs">
-          <button class="tab active" data-sym="${h.sym}" data-range="7D">7D</button>
-          <button class="tab"        data-sym="${h.sym}" data-range="3M">3M</button>
-          <button class="tab"        data-sym="${h.sym}" data-range="12M">12M</button>
+          <button class="tab" data-sym="${h.sym}" data-range="7D">7D</button>
+          <button class="tab" data-sym="${h.sym}" data-range="3M">3M</button>
+          <button class="tab" data-sym="${h.sym}" data-range="12M">12M</button>
         </div>
         <div class="hl-display">
           <div class="hl-item"><span class="hl-label">HIGH</span><span class="hl-val-h" id="hl-h-${h.sym}">—</span></div>
-          <div class="hl-item"><span class="hl-label">LOW</span><span class="hl-val-l"  id="hl-l-${h.sym}">—</span></div>
+          <div class="hl-item"><span class="hl-label">LOW</span><span class="hl-val-l" id="hl-l-${h.sym}">—</span></div>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart-${h.sym}"></canvas></div>
@@ -291,218 +249,193 @@ function createCard(h, idx) {
   return el;
 }
 
-// ── Render candlestick chart ───────────────────────────────────────────────────
-function renderChart(sym, rangeKey) {
-  const candles = DATA.ohlc?.[sym]?.[rangeKey];
-  if (!candles?.length) return;
-  const hi = Math.max(...candles.map(d=>d.h));
-  const lo = Math.min(...candles.map(d=>d.l));
-  const hEl = document.getElementById(`hl-h-${sym}`);
-  const lEl = document.getElementById(`hl-l-${sym}`);
-  if (hEl) hEl.textContent = hi.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  if (lEl) lEl.textContent = lo.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  // Destroy previous chart for this symbol
-  const oldKey = Object.keys(chartInstances).find(k => k.startsWith(sym+'_'));
-  if (oldKey) { chartInstances[oldKey].destroy(); delete chartInstances[oldKey]; }
-  const canvas = document.getElementById(`chart-${sym}`);
-  if (!canvas) return;
-  const labels = candles.map(d =>
-    new Date(d.t).toLocaleDateString('en-AU', {month:'short', day:'numeric'})
-  );
-  chartInstances[`${sym}_${rangeKey}`] = new Chart(canvas.getContext('2d'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data: candles.map(d=>d.c),
-        borderWidth:0, pointRadius:0, backgroundColor:'transparent', borderColor:'transparent',
-        ohlcData: candles,
-      }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false, animation:{duration:150},
-      plugins: {
-        legend: {display:false},
-        tooltip: {
-          mode:'index', intersect:false,
-          backgroundColor:'#181c23', borderColor:'#2a3040', borderWidth:1,
-          titleColor:'#5a6278', bodyColor:'#e8eaf0',
-          titleFont:{family:'Space Mono',size:9}, bodyFont:{family:'Space Mono',size:11},
-          callbacks: {
-            title: items => new Date(candles[items[0].dataIndex].t)
-              .toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
-            label: item => {
-              const d = candles[item.dataIndex];
-              return [`  O  ${d.o.toFixed(2)}`,`  H  ${d.h.toFixed(2)}`,`  L  ${d.l.toFixed(2)}`,`  C  ${d.c.toFixed(2)}`];
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          display:true, grid:{display:false},
-          border:{color:'rgba(255,255,255,0.05)'},
-          ticks:{color:'#3a4258', font:{family:'Space Mono',size:8},
-            maxTicksLimit: rangeKey==='12M'?6:rangeKey==='3M'?7:5, maxRotation:0}
-        },
-        y: {
-          display:true, position:'right',
-          min: lo*0.994, max: hi*1.006,
-          grid:{color:'rgba(255,255,255,0.04)'},
-          border:{color:'rgba(255,255,255,0.05)'},
-          ticks:{color:'#5a6278', font:{family:'Space Mono',size:8}, maxTicksLimit:4,
-            callback: v => v>=1000?(v/1000).toFixed(1)+'k':v>=10?v.toFixed(0):v.toFixed(2)}
-        }
-      },
-      interaction:{mode:'index',intersect:false}
-    }
+function setActiveTab(sym, range){
+  document.querySelectorAll(`.tab[data-sym="${sym}"]`).forEach(t=>{
+    t.classList.toggle('active', t.dataset.range===range);
+  });
+}
+
+// ── Render chart ──────────────────────────────────────────────────────────────
+function renderChart(sym,rangeKey){
+  const candles=DATA.ohlc?.[sym]?.[rangeKey];
+  if(!candles?.length)return;
+  const hi=Math.max(...candles.map(d=>d.h));
+  const lo=Math.min(...candles.map(d=>d.l));
+  const hEl=document.getElementById('hl-h-'+sym);
+  const lEl=document.getElementById('hl-l-'+sym);
+  if(hEl)hEl.textContent=hi.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(lEl)lEl.textContent=lo.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const oldKey=Object.keys(chartInstances).find(k=>k.startsWith(sym+'_'));
+  if(oldKey){chartInstances[oldKey].destroy();delete chartInstances[oldKey];}
+  const canvas=document.getElementById('chart-'+sym);
+  if(!canvas)return;
+  const labels=candles.map(d=>new Date(d.t).toLocaleDateString('en-AU',{month:'short',day:'numeric'}));
+  chartInstances[sym+'_'+rangeKey]=new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[{data:candles.map(d=>d.c),borderWidth:0,pointRadius:0,backgroundColor:'transparent',borderColor:'transparent',ohlcData:candles}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:150},
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'#181c23',borderColor:'#2a3040',borderWidth:1,titleColor:'#5a6278',bodyColor:'#e8eaf0',titleFont:{family:'Space Mono',size:9},bodyFont:{family:'Space Mono',size:11},
+        callbacks:{title:items=>new Date(candles[items[0].dataIndex].t).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
+          label:item=>{const d=candles[item.dataIndex];return[`  O  ${d.o.toFixed(2)}`,`  H  ${d.h.toFixed(2)}`,`  L  ${d.l.toFixed(2)}`,`  C  ${d.c.toFixed(2)}`];}}}},
+      scales:{x:{display:true,grid:{display:false},border:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#3a4258',font:{family:'Space Mono',size:8},maxTicksLimit:rangeKey==='12M'?6:rangeKey==='3M'?7:5,maxRotation:0}},
+        y:{display:true,position:'right',min:lo*.994,max:hi*1.006,grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.05)'},
+          ticks:{color:'#5a6278',font:{family:'Space Mono',size:8},maxTicksLimit:4,callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v>=10?v.toFixed(0):v.toFixed(2)}}},
+      interaction:{mode:'index',intersect:false}}
   });
 }
 
 // ── Update card stats ─────────────────────────────────────────────────────────
-function updateCard(h) {
-  const q = DATA.quotes?.[h.sym];
-  if (!q) return;
-  const priceCur = q.currency || h.currency;
-  const to = displayCurrency === 'default' ? priceCur : displayCurrency;
-  const fxP = getFX(priceCur, to);
-  const price = q.price * fxP;
-  const prev  = q.prev  * fxP;
-  document.getElementById(`price-${h.sym}`).textContent = fmt(price, to);
-  const pct = prev ? (price - prev) / prev * 100 : 0;
-  const chg = document.getElementById(`change-${h.sym}`);
-  chg.textContent = fmtPct(pct);
-  chg.className = `price-change ${pct >= 0 ? 'up' : 'down'}`;
-  // Avg cost
-  const costTo = displayCurrency === 'default' ? h.currency : displayCurrency;
-  const cc = h.avgCost * getFX(h.currency, costTo);
-  document.getElementById(`avgcost-${h.sym}`).textContent = fmt(cc, costTo);
-  // PnL
-  const priceCC = price * getFX(to, costTo);
-  const pnlPS = priceCC - cc;
-  const totalPnl = pnlPS * h.shares;
-  const pnlPct = cc > 0 ? (pnlPS / cc) * 100 : 0;
-  const el = document.getElementById(`pnl-${h.sym}`);
-  el.textContent = `${fmt(totalPnl, costTo)} (${fmtPct(pnlPct)})`;
-  el.className = `stat-value ${totalPnl >= 0 ? 'profit' : 'loss'}`;
+function updateCard(h){
+  const q=DATA.quotes?.[h.sym];if(!q)return;
+  const priceCur=q.currency||h.currency;
+  const to=displayCurrency==='default'?priceCur:displayCurrency;
+  const fxP=getFX(priceCur,to);
+  const price=q.price*fxP,prev=q.prev*fxP;
+  document.getElementById('price-'+h.sym).textContent=fmt(price,to);
+  const pct=prev?(price-prev)/prev*100:0;
+  const chg=document.getElementById('change-'+h.sym);
+  chg.textContent=fmtPct(pct);chg.className='price-change '+(pct>=0?'up':'down');
+  const costTo=displayCurrency==='default'?h.currency:displayCurrency;
+  const cc=h.avgCost*getFX(h.currency,costTo);
+  document.getElementById('avgcost-'+h.sym).textContent=fmt(cc,costTo);
+  const priceCC=price*getFX(to,costTo);
+  const pnlPS=priceCC-cc,totalPnl=pnlPS*h.shares,pnlPct=cc>0?(pnlPS/cc)*100:0;
+  const el=document.getElementById('pnl-'+h.sym);
+  el.textContent=fmt(totalPnl,costTo)+' ('+fmtPct(pnlPct)+')';
+  el.className='stat-value '+(totalPnl>=0?'profit':'loss');
 }
 
-// ── Pie chart ─────────────────────────────────────────────────────────────────
+// ── Pie ───────────────────────────────────────────────────────────────────────
 let pieChart;
-function buildPie() {
-  const vals = HOLDINGS.map(h => {
-    const q = DATA.quotes?.[h.sym]; if (!q) return 0;
-    return (q.price || 0) * getFX(q.currency || h.currency, 'AUD') * h.shares;
+function buildPie(){
+  const holdings=DATA.holdings;
+  const vals=holdings.map(h=>{
+    const q=DATA.quotes?.[h.sym];if(!q)return 0;
+    return(q.price||0)*getFX(q.currency||h.currency,'AUD')*h.shares;
   });
-  const total = vals.reduce((a,b)=>a+b,0);
-  const cols  = HOLDINGS.map((_,i) => gc(i));
-  const lg = document.getElementById('legendGrid');
-  lg.innerHTML = '';
-  HOLDINGS.forEach((h,i) => {
-    const pct = total > 0 ? (vals[i]/total*100).toFixed(1) : '0.0';
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<div class="legend-dot" style="background:${cols[i]}"></div><span class="legend-sym">${h.sym}</span><span class="legend-pct">${pct}%</span>`;
-    item.onclick = () => document.getElementById(`card-${h.sym}`)?.scrollIntoView({behavior:'smooth',block:'center'});
+  const total=vals.reduce((a,b)=>a+b,0);
+  const cols=holdings.map((_,i)=>gc(i));
+  const lg=document.getElementById('legendGrid');lg.innerHTML='';
+  holdings.forEach((h,i)=>{
+    const pct=total>0?(vals[i]/total*100).toFixed(1):'0.0';
+    const item=document.createElement('div');item.className='legend-item';
+    item.innerHTML=`<div class="legend-dot" style="background:${cols[i]}"></div><span class="legend-sym">${h.sym}</span><span class="legend-pct">${pct}%</span>`;
+    item.onclick=()=>document.getElementById('card-'+h.sym)?.scrollIntoView({behavior:'smooth',block:'center'});
     lg.appendChild(item);
   });
-  const ctx = document.getElementById('pieChart').getContext('2d');
-  if (pieChart) pieChart.destroy();
-  pieChart = new Chart(ctx, {
-    type:'doughnut',
-    data:{labels:HOLDINGS.map(h=>h.sym), datasets:[{data:vals, backgroundColor:cols, borderColor:'#0a0c0f', borderWidth:2, hoverBorderWidth:3, hoverOffset:8}]},
-    options:{responsive:true, maintainAspectRatio:false, cutout:'66%',
-      plugins:{legend:{display:false},
-        tooltip:{backgroundColor:'#181c23',borderColor:'#1e2530',borderWidth:1,
-          titleColor:'#00e5a0',bodyColor:'#e8eaf0',
-          titleFont:{family:'Space Mono',size:11},bodyFont:{family:'Space Mono',size:12},
-          callbacks:{label:ctx=>{const p=total>0?(ctx.parsed/total*100).toFixed(1):0;return ` A$${ctx.parsed.toLocaleString(undefined,{maximumFractionDigits:0})} (${p}%)`;}}
-        }
-      }
-    }
+  const ctx=document.getElementById('pieChart').getContext('2d');
+  if(pieChart)pieChart.destroy();
+  pieChart=new Chart(ctx,{type:'doughnut',
+    data:{labels:holdings.map(h=>h.sym),datasets:[{data:vals,backgroundColor:cols,borderColor:'#0a0c0f',borderWidth:2,hoverBorderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{legend:{display:false},
+      tooltip:{backgroundColor:'#181c23',borderColor:'#1e2530',borderWidth:1,titleColor:'#00e5a0',bodyColor:'#e8eaf0',titleFont:{family:'Space Mono',size:11},bodyFont:{family:'Space Mono',size:12},
+        callbacks:{label:ctx=>{const p=total>0?(ctx.parsed/total*100).toFixed(1):0;return` A$${ctx.parsed.toLocaleString(undefined,{maximumFractionDigits:0})} (${p}%)`;}}
+      }}}
   });
 }
 
-function updateTotal() {
-  const to = displayCurrency === 'default' ? 'AUD' : displayCurrency;
-  const total = HOLDINGS.reduce((acc, h) => {
-    const q = DATA.quotes?.[h.sym]; if (!q) return acc;
-    return acc + (q.price||0) * getFX(q.currency||h.currency, to) * h.shares;
-  }, 0);
-  document.getElementById('totalValueDisplay').textContent =
-    (CSYM[to]||'') + total.toLocaleString(undefined,{maximumFractionDigits:0});
+function updateTotal(){
+  const holdings=DATA.holdings;
+  const to=displayCurrency==='default'?'AUD':displayCurrency;
+  const total=holdings.reduce((acc,h)=>{const q=DATA.quotes?.[h.sym];if(!q)return acc;return acc+(q.price||0)*getFX(q.currency||h.currency,to)*h.shares;},0);
+  document.getElementById('totalValueDisplay').textContent=(CSYM[to]||'')+total.toLocaleString(undefined,{maximumFractionDigits:0});
 }
 
-function setProgress(p, msg) {
-  document.getElementById('loaderBar').style.width = p + '%';
-  document.getElementById('loaderStatus').textContent = msg;
-}
+// ── Build sorted region groups ─────────────────────────────────────────────────
+function buildRegionGroups(){
+  const holdings=DATA.holdings;
+  const container=document.getElementById('stocksContainer');
+  container.innerHTML='';
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-async function init() {
-  setProgress(10, 'FETCHING DATA.JSON');
-  try {
-    const res = await fetch('data.json?t=' + Date.now());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    DATA = await res.json();
-  } catch(e) {
-    document.getElementById('loadingOverlay').innerHTML =
-      `<div class="error-state">FAILED TO LOAD DATA<span>${e.message}</span><br><small style="margin-top:12px;display:block;font-size:10px">Run: python scripts/fetch_data.py</small></div>`;
-    document.getElementById('loadingOverlay').style.opacity = '1';
-    return;
-  }
+  // Group and sort by region then ticker
+  const groups={};
+  holdings.forEach(h=>{
+    if(!groups[h.region])groups[h.region]=[];
+    groups[h.region].push(h);
+  });
+  Object.values(groups).forEach(g=>g.sort((a,b)=>a.sym.localeCompare(b.sym)));
 
-  // Show last-updated timestamp
-  if (DATA.generated_at) {
-    const d = new Date(DATA.generated_at);
-    const rel = getRelativeTime(d);
-    document.getElementById('updatedBadge').textContent = `↻ ${rel}`;
-  }
-
-  setProgress(30, 'BUILDING CARDS');
-  const grid = document.getElementById('stocksGrid');
-  HOLDINGS.forEach((h,i) => grid.appendChild(createCard(h,i)));
-
-  setProgress(55, 'UPDATING STATS');
-  HOLDINGS.forEach(h => updateCard(h));
-
-  setProgress(75, 'RENDERING CHARTS');
-  HOLDINGS.forEach(h => renderChart(h.sym, '7D'));
-
-  setProgress(90, 'BUILDING PIE');
-  buildPie();
-  updateTotal();
-
-  setProgress(100, 'READY');
-  setTimeout(() => {
-    const ov = document.getElementById('loadingOverlay');
-    ov.style.opacity = '0';
-    setTimeout(() => ov.style.display='none', 400);
-  }, 150);
-
-  // Tab switching
-  document.querySelectorAll('.tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sym = btn.dataset.sym, range = btn.dataset.range;
-      document.querySelectorAll(`.tab[data-sym="${sym}"]`).forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      renderChart(sym, range);
+  let cardIdx=0;
+  REGION_ORDER.filter(r=>groups[r]).forEach(region=>{
+    const group=groups[region];
+    const block=document.createElement('div');
+    block.className='region-block';
+    block.innerHTML=`<div class="region-header">
+      <div class="legend-dot region-dot-${region}" style="width:10px;height:10px;border-radius:3px;flex-shrink:0"></div>
+      <span class="region-label">${region}</span>
+      <div class="region-line"></div>
+      <span class="region-count">${group.length} position${group.length!==1?'s':''}</span>
+    </div>
+    <div class="stocks-grid" id="grid-${region}"></div>`;
+    container.appendChild(block);
+    const grid=block.querySelector('.stocks-grid');
+    group.forEach(h=>{
+      grid.appendChild(createCard(h,cardIdx++));
     });
   });
 }
 
-function getRelativeTime(date) {
-  const mins = Math.round((Date.now() - date) / 60000);
-  if (mins < 2)   return 'just now';
-  if (mins < 60)  return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24)   return `${hrs}h ago`;
-  return `${Math.round(hrs/24)}d ago`;
+function setProgress(p,msg){document.getElementById('loaderBar').style.width=p+'%';document.getElementById('loaderStatus').textContent=msg;}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init(){
+  setProgress(10,'FETCHING DATA.JSON');
+  try{
+    const res=await fetch('data.json?t='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    DATA=await res.json();
+  }catch(e){
+    document.getElementById('loadingOverlay').innerHTML=`<div style="text-align:center;font-family:Space Mono,monospace;color:#5a6278;font-size:13px">FAILED TO LOAD DATA<br><span style="color:#ff4d6a;font-size:11px;margin-top:8px;display:block">${e.message}</span></div>`;
+    return;
+  }
+
+  if(DATA.generated_at){
+    document.getElementById('updatedBadge').textContent='↻ '+relTime(new Date(DATA.generated_at));
+  }
+
+  setProgress(30,'BUILDING LAYOUT');
+  buildRegionGroups();
+
+  setProgress(55,'UPDATING STATS');
+  DATA.holdings.forEach(h=>updateCard(h));
+
+  setProgress(75,'RENDERING CHARTS');
+  DATA.holdings.forEach(h=>{
+    setActiveTab(h.sym, globalRange);
+    renderChart(h.sym, globalRange);
+  });
+
+  setProgress(90,'BUILDING PIE');
+  buildPie();updateTotal();
+
+  setProgress(100,'READY');
+  setTimeout(()=>{const ov=document.getElementById('loadingOverlay');ov.style.opacity='0';setTimeout(()=>ov.style.display='none',400);},150);
+
+  // Individual tab clicks
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('.tab');
+    if(!btn)return;
+    const sym=btn.dataset.sym,range=btn.dataset.range;
+    setActiveTab(sym,range);
+    renderChart(sym,range);
+  });
 }
 
-document.getElementById('currencySelect').addEventListener('change', e => {
-  displayCurrency = e.target.value;
-  HOLDINGS.forEach(h => updateCard(h));
+// ── Global range selector ─────────────────────────────────────────────────────
+document.getElementById('globalRange').addEventListener('change',e=>{
+  globalRange=e.target.value;
+  if(!DATA)return;
+  DATA.holdings.forEach(h=>{
+    setActiveTab(h.sym,globalRange);
+    renderChart(h.sym,globalRange);
+  });
+});
+
+// ── Currency selector ─────────────────────────────────────────────────────────
+document.getElementById('currencySelect').addEventListener('change',e=>{
+  displayCurrency=e.target.value;
+  if(!DATA)return;
+  DATA.holdings.forEach(h=>updateCard(h));
   updateTotal();
 });
 

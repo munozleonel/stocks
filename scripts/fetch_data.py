@@ -1,105 +1,85 @@
 #!/usr/bin/env python3
 """
-fetch_data.py
-Fetches OHLC history + live quotes for every holding using yfinance.
-Writes docs/data.json  — consumed by the portfolio dashboard.
-Run locally:  python scripts/fetch_data.py
-Run via CI:   called by GitHub Actions on a schedule.
+fetch_data.py  —  fetches OHLC + quotes for MSP Portfolio holdings.
+Writes docs/data.json consumed by the dashboard.
 """
 
 import json, datetime, sys, os, time
 import yfinance as yf
 
-# ── Holdings ──────────────────────────────────────────────────────────────────
 HOLDINGS = [
-    {"sym": "AAPL",    "name": "Apple Inc.",                   "shares": 4,       "avgCost": 240.0000, "currency": "USD"},
-    {"sym": "AMZN",    "name": "Amazon.com, Inc.",             "shares": 8.9087,  "avgCost": 2245.000, "currency": "USD"},
-    {"sym": "META",    "name": "Meta Platforms, Inc.",         "shares": 15.0007, "avgCost": 189.5068, "currency": "USD"},
-    {"sym": "TSLA",    "name": "Tesla, Inc.",                  "shares": 83.7728, "avgCost": 242.4156, "currency": "USD"},
-    {"sym": "BABA",    "name": "Alibaba Group Holding",        "shares": 23.0000, "avgCost": 166.4426, "currency": "USD"},
-    {"sym": "COIN",    "name": "Coinbase Global, Inc.",        "shares": 9.0000,  "avgCost": 166.2911, "currency": "USD"},
-    {"sym": "BA",      "name": "Boeing Company (The)",         "shares": 6.0000,  "avgCost": 174.4433, "currency": "USD"},
-    {"sym": "CQQQ",    "name": "Invesco China Technology ETF", "shares": 20.0000, "avgCost": 66.7000,  "currency": "USD"},
-    {"sym": "CRSR",    "name": "Corsair Gaming, Inc.",         "shares": 36.9300, "avgCost": 36.0049,  "currency": "USD"},
-    {"sym": "MU",      "name": "Micron Technology, Inc.",      "shares": 5.0000,  "avgCost": 59.3700,  "currency": "USD"},
-    {"sym": "NFLX",    "name": "Netflix, Inc.",                "shares": 20.0000, "avgCost": 382.0000, "currency": "USD"},
-    {"sym": "UNH",     "name": "UnitedHealth Group",           "shares": 4.0000,  "avgCost": 230.9125, "currency": "USD"},
-    {"sym": "V",       "name": "Visa Inc.",                    "shares": 3.0000,  "avgCost": 209.2633, "currency": "USD"},
-    {"sym": "BRK-B",   "name": "Berkshire Hathaway Inc.",      "shares": 2.0000,  "avgCost": 177.1200, "currency": "USD"},
-    {"sym": "CAP.PA",  "name": "Capgemini",                    "shares": 27.8578, "avgCost": 90.4557,  "currency": "EUR"},
-    {"sym": "A2M.AX",  "name": "A2 Milk Co.",                  "shares": 220.0,   "avgCost": 9.2684,   "currency": "AUD"},
-    {"sym": "NCK.AX",  "name": "Nick Scali Ltd.",              "shares": 155.0,   "avgCost": 6.5000,   "currency": "AUD"},
-    {"sym": "WBC.AX",  "name": "Westpac Banking Corp.",        "shares": 36.0,    "avgCost": 27.8000,  "currency": "AUD"},
-    {"sym": "VAS.AX",  "name": "Vanguard Aust Shares ETF",     "shares": 10.0,    "avgCost": 72.8500,  "currency": "AUD"},
-    {"sym": "ETH-AUD", "name": "Ethereum",                     "shares": 1.12,    "avgCost": 1000.0,   "currency": "AUD"},
+    # ── Australia ──────────────────────────────────────────────────────────────
+    {"sym":"A2M.AX",  "name":"A2 Milk Co.",              "region":"Australia", "shares":220.0,   "avgCost":9.2684,   "currency":"AUD"},
+    {"sym":"NCK.AX",  "name":"Nick Scali Ltd.",           "region":"Australia", "shares":155.0,   "avgCost":6.5000,   "currency":"AUD"},
+    {"sym":"VAS.AX",  "name":"Vanguard Aust Shares ETF",  "region":"Australia", "shares":10.0,    "avgCost":72.8500,  "currency":"AUD"},
+    {"sym":"WBC.AX",  "name":"Westpac Banking Corp.",     "region":"Australia", "shares":36.0,    "avgCost":27.8000,  "currency":"AUD"},
+    # ── China ─────────────────────────────────────────────────────────────────
+    {"sym":"BABA",    "name":"Alibaba Group Holding",     "region":"China",     "shares":23.0,    "avgCost":166.4426, "currency":"USD"},
+    {"sym":"CQQQ",    "name":"Invesco China Tech ETF",    "region":"China",     "shares":20.0,    "avgCost":66.7000,  "currency":"USD"},
+    # ── Crypto ────────────────────────────────────────────────────────────────
+    {"sym":"ETH-AUD", "name":"Ethereum",                  "region":"Crypto",    "shares":1.12,    "avgCost":1000.0,   "currency":"AUD"},
+    # ── Europe ────────────────────────────────────────────────────────────────
+    {"sym":"CAP.PA",  "name":"Capgemini",                 "region":"Europe",    "shares":27.8578, "avgCost":90.4557,  "currency":"EUR"},
+    # ── US ────────────────────────────────────────────────────────────────────
+    {"sym":"AAPL",    "name":"Apple Inc.",                "region":"US",        "shares":4.0,     "avgCost":60.0000,  "currency":"USD"},
+    {"sym":"AMZN",    "name":"Amazon.com, Inc.",          "region":"US",        "shares":8.9087,  "avgCost":112.2500, "currency":"USD"},
+    {"sym":"BA",      "name":"Boeing Company (The)",      "region":"US",        "shares":6.0,     "avgCost":174.4433, "currency":"USD"},
+    {"sym":"BRK-B",   "name":"Berkshire Hathaway Inc.",   "region":"US",        "shares":2.0,     "avgCost":177.1200, "currency":"USD"},
+    {"sym":"COIN",    "name":"Coinbase Global, Inc.",     "region":"US",        "shares":9.0,     "avgCost":166.2911, "currency":"USD"},
+    {"sym":"CRSR",    "name":"Corsair Gaming, Inc.",      "region":"US",        "shares":36.93,   "avgCost":36.0049,  "currency":"USD"},
+    {"sym":"META",    "name":"Meta Platforms, Inc.",      "region":"US",        "shares":15.0007, "avgCost":189.5068, "currency":"USD"},
+    {"sym":"MU",      "name":"Micron Technology, Inc.",   "region":"US",        "shares":5.0,     "avgCost":59.3700,  "currency":"USD"},
+    {"sym":"NFLX",    "name":"Netflix, Inc.",             "region":"US",        "shares":20.0,    "avgCost":38.2000,  "currency":"USD"},
+    {"sym":"TSLA",    "name":"Tesla, Inc.",               "region":"US",        "shares":83.7733, "avgCost":16.1610,  "currency":"USD"},
+    {"sym":"UNH",     "name":"UnitedHealth Group",        "region":"US",        "shares":4.0,     "avgCost":230.9125, "currency":"USD"},
+    {"sym":"V",       "name":"Visa Inc.",                 "region":"US",        "shares":3.0,     "avgCost":209.2633, "currency":"USD"},
 ]
 
 FX_PAIRS = ["AUDUSD=X", "EURUSD=X", "EURAUD=X"]
-
-RANGE_MAP = {
-    "7D":  ("7d",  "1d"),
-    "3M":  ("3mo", "1d"),
-    "12M": ("1y",  "1d"),
-}
+RANGE_MAP = {"7D":("7d","1d"), "3M":("3mo","1d"), "12M":("1y","1d")}
 
 
-def fetch_ohlc(sym: str) -> dict:
-    """Return {7D: [...], 3M: [...], 12M: [...]} for one symbol."""
+def fetch_ohlc(sym):
     result = {}
     ticker = yf.Ticker(sym)
     for key, (period, interval) in RANGE_MAP.items():
         try:
             df = ticker.history(period=period, interval=interval, auto_adjust=True)
             if df.empty:
-                print(f"  [WARN] {sym} {key}: empty dataframe", file=sys.stderr)
-                result[key] = []
-                continue
+                result[key] = []; continue
             candles = []
             for ts, row in df.iterrows():
-                # ts is a pandas Timestamp; convert to ms epoch
-                epoch_ms = int(ts.timestamp() * 1000)
-                candles.append({
-                    "t": epoch_ms,
-                    "o": round(float(row["Open"]),  4),
-                    "h": round(float(row["High"]),  4),
-                    "l": round(float(row["Low"]),   4),
-                    "c": round(float(row["Close"]), 4),
-                })
+                candles.append({"t":int(ts.timestamp()*1000),
+                    "o":round(float(row["Open"]),4), "h":round(float(row["High"]),4),
+                    "l":round(float(row["Low"]),4),  "c":round(float(row["Close"]),4)})
             result[key] = candles
             print(f"  {sym:12s} {key:4s}  {len(candles)} candles")
         except Exception as e:
             print(f"  [ERROR] {sym} {key}: {e}", file=sys.stderr)
             result[key] = []
-        time.sleep(0.1)   # be polite to Yahoo
+        time.sleep(0.1)
     return result
 
 
-def fetch_quote(sym: str) -> dict:
-    """Return {price, prev, currency} for one symbol."""
+def fetch_quote(sym):
     try:
-        t = yf.Ticker(sym)
-        info = t.fast_info
-        price = float(info.last_price)
-        prev  = float(info.previous_close) if info.previous_close else price
-        cur   = getattr(info, "currency", "USD")
-        return {"price": round(price, 4), "prev": round(prev, 4), "currency": cur}
+        info = yf.Ticker(sym).fast_info
+        return {"price":round(float(info.last_price),4),
+                "prev":round(float(info.previous_close),4),
+                "currency":getattr(info,"currency","USD")}
     except Exception as e:
         print(f"  [ERROR] quote {sym}: {e}", file=sys.stderr)
         return None
 
 
-def fetch_fx() -> dict:
-    """Return {FROM_TO: rate, ...} for the FX pairs we need."""
+def fetch_fx():
     rates = {}
     for pair in FX_PAIRS:
         try:
-            t = yf.Ticker(pair)
-            price = float(t.fast_info.last_price)
-            # e.g. AUDUSD=X  -> AUD_USD
-            clean = pair.replace("=X", "")          # AUDUSD
-            frm, to = clean[:3], clean[3:]           # AUD, USD
+            price = float(yf.Ticker(pair).fast_info.last_price)
+            frm, to = pair[:3], pair[3:6]
             rates[f"{frm}_{to}"] = round(price, 5)
-            rates[f"{to}_{frm}"] = round(1 / price, 5)
+            rates[f"{to}_{frm}"] = round(1/price, 5)
             print(f"  FX {frm}/{to} = {price:.5f}")
         except Exception as e:
             print(f"  [ERROR] FX {pair}: {e}", file=sys.stderr)
@@ -108,36 +88,21 @@ def fetch_fx() -> dict:
 
 
 def main():
-    print("=== MSP Portfolio Data Fetch ===")
-    print(f"Started: {datetime.datetime.utcnow().isoformat()}Z\n")
-
-    output = {
-        "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
-        "ohlc":   {},
-        "quotes": {},
-        "fx":     {},
-    }
-
-    print("── FX Rates ──")
+    print(f"=== MSP Portfolio Fetch  {datetime.datetime.utcnow().isoformat()}Z ===\n")
+    output = {"generated_at": datetime.datetime.utcnow().isoformat()+"Z",
+              "holdings": HOLDINGS, "ohlc":{}, "quotes":{}, "fx":{}}
+    print("── FX ──")
     output["fx"] = fetch_fx()
-
     print("\n── OHLC + Quotes ──")
     for h in HOLDINGS:
         sym = h["sym"]
         print(f"\n{sym}")
         output["ohlc"][sym]   = fetch_ohlc(sym)
         output["quotes"][sym] = fetch_quote(sym)
-
-    # Write output
-    out_path = os.path.join(os.path.dirname(__file__), "..", "docs", "data.json")
-    out_path = os.path.normpath(out_path)
-    with open(out_path, "w") as f:
-        json.dump(output, f, separators=(",", ":"))
-
-    size_kb = os.path.getsize(out_path) / 1024
-    print(f"\n✓ Written {out_path}  ({size_kb:.1f} KB)")
-    print(f"Finished: {datetime.datetime.utcnow().isoformat()}Z")
-
+    out = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "docs", "data.json"))
+    with open(out, "w") as f:
+        json.dump(output, f, separators=(",",":"))
+    print(f"\n✓ {out}  ({os.path.getsize(out)/1024:.1f} KB)")
 
 if __name__ == "__main__":
     main()
