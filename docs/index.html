@@ -156,6 +156,30 @@
 </div>
 </div>
 <script>
+// ── Embedded holdings (fallback if data.json has no holdings key) ─────────────
+const HOLDINGS_FALLBACK = [
+  {sym:'A2M.AX',  name:'A2 Milk Co.',             region:'Australia', shares:220.0,   avgCost:9.2684,   currency:'AUD'},
+  {sym:'NCK.AX',  name:'Nick Scali Ltd.',          region:'Australia', shares:155.0,   avgCost:6.5000,   currency:'AUD'},
+  {sym:'VAS.AX',  name:'Vanguard Aust Shares ETF', region:'Australia', shares:10.0,    avgCost:72.8500,  currency:'AUD'},
+  {sym:'WBC.AX',  name:'Westpac Banking Corp.',    region:'Australia', shares:36.0,    avgCost:27.8000,  currency:'AUD'},
+  {sym:'BABA',    name:'Alibaba Group Holding',    region:'China',     shares:23.0,    avgCost:166.4426, currency:'USD'},
+  {sym:'CQQQ',    name:'Invesco China Tech ETF',   region:'China',     shares:20.0,    avgCost:66.7000,  currency:'USD'},
+  {sym:'ETH-AUD', name:'Ethereum',                 region:'Crypto',    shares:1.12,    avgCost:1000.0,   currency:'AUD'},
+  {sym:'CAP.PA',  name:'Capgemini',                region:'Europe',    shares:27.8578, avgCost:90.4557,  currency:'EUR'},
+  {sym:'AAPL',    name:'Apple Inc.',               region:'US',        shares:4.0,     avgCost:60.0000,  currency:'USD'},
+  {sym:'AMZN',    name:'Amazon.com, Inc.',         region:'US',        shares:8.9087,  avgCost:112.2500, currency:'USD'},
+  {sym:'BA',      name:'Boeing Company (The)',     region:'US',        shares:6.0,     avgCost:174.4433, currency:'USD'},
+  {sym:'BRK-B',   name:'Berkshire Hathaway Inc.',  region:'US',        shares:2.0,     avgCost:177.1200, currency:'USD'},
+  {sym:'COIN',    name:'Coinbase Global, Inc.',    region:'US',        shares:9.0,     avgCost:166.2911, currency:'USD'},
+  {sym:'CRSR',    name:'Corsair Gaming, Inc.',     region:'US',        shares:36.93,   avgCost:36.0049,  currency:'USD'},
+  {sym:'META',    name:'Meta Platforms, Inc.',     region:'US',        shares:15.0007, avgCost:189.5068, currency:'USD'},
+  {sym:'MU',      name:'Micron Technology, Inc.',  region:'US',        shares:5.0,     avgCost:59.3700,  currency:'USD'},
+  {sym:'NFLX',    name:'Netflix, Inc.',            region:'US',        shares:20.0,    avgCost:38.2000,  currency:'USD'},
+  {sym:'TSLA',    name:'Tesla, Inc.',              region:'US',        shares:83.7733, avgCost:16.1610,  currency:'USD'},
+  {sym:'UNH',     name:'UnitedHealth Group',       region:'US',        shares:4.0,     avgCost:230.9125, currency:'USD'},
+  {sym:'V',       name:'Visa Inc.',                region:'US',        shares:3.0,     avgCost:209.2633, currency:'USD'},
+];
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let DATA = null;
 let displayCurrency = 'default';
@@ -308,7 +332,7 @@ function updateCard(h){
 // ── Pie ───────────────────────────────────────────────────────────────────────
 let pieChart;
 function buildPie(){
-  const holdings=DATA.holdings;
+  const holdings=DATA.holdings||HOLDINGS_FALLBACK;
   const vals=holdings.map(h=>{
     const q=DATA.quotes?.[h.sym];if(!q)return 0;
     return(q.price||0)*getFX(q.currency||h.currency,'AUD')*h.shares;
@@ -335,7 +359,7 @@ function buildPie(){
 }
 
 function updateTotal(){
-  const holdings=DATA.holdings;
+  const holdings=DATA.holdings||HOLDINGS_FALLBACK;
   const to=displayCurrency==='default'?'AUD':displayCurrency;
   const total=holdings.reduce((acc,h)=>{const q=DATA.quotes?.[h.sym];if(!q)return acc;return acc+(q.price||0)*getFX(q.currency||h.currency,to)*h.shares;},0);
   document.getElementById('totalValueDisplay').textContent=(CSYM[to]||'')+total.toLocaleString(undefined,{maximumFractionDigits:0});
@@ -343,7 +367,7 @@ function updateTotal(){
 
 // ── Build sorted region groups ─────────────────────────────────────────────────
 function buildRegionGroups(){
-  const holdings=DATA.holdings;
+  const holdings=DATA.holdings||HOLDINGS_FALLBACK;
   const container=document.getElementById('stocksContainer');
   container.innerHTML='';
 
@@ -397,10 +421,10 @@ async function init(){
   buildRegionGroups();
 
   setProgress(55,'UPDATING STATS');
-  DATA.holdings.forEach(h=>updateCard(h));
+  (DATA.holdings||HOLDINGS_FALLBACK).forEach(h=>updateCard(h));
 
   setProgress(75,'RENDERING CHARTS');
-  DATA.holdings.forEach(h=>{
+  (DATA.holdings||HOLDINGS_FALLBACK).forEach(h=>{
     setActiveTab(h.sym, globalRange);
     renderChart(h.sym, globalRange);
   });
@@ -425,7 +449,7 @@ async function init(){
 document.getElementById('globalRange').addEventListener('change',e=>{
   globalRange=e.target.value;
   if(!DATA)return;
-  DATA.holdings.forEach(h=>{
+  (DATA.holdings||HOLDINGS_FALLBACK).forEach(h=>{
     setActiveTab(h.sym,globalRange);
     renderChart(h.sym,globalRange);
   });
@@ -435,7 +459,7 @@ document.getElementById('globalRange').addEventListener('change',e=>{
 document.getElementById('currencySelect').addEventListener('change',e=>{
   displayCurrency=e.target.value;
   if(!DATA)return;
-  DATA.holdings.forEach(h=>updateCard(h));
+  (DATA.holdings||HOLDINGS_FALLBACK).forEach(h=>updateCard(h));
   updateTotal();
 });
 
