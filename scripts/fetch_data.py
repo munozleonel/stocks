@@ -72,6 +72,21 @@ def fetch_quote(sym):
         return None
 
 
+def fetch_fundamentals(sym):
+    try:
+        info = yf.Ticker(sym).info
+        return {
+            "marketCap":    info.get("marketCap"),
+            "pe":           info.get("trailingPE"),
+            "forwardPe":    info.get("forwardPE"),
+            "priceTarget":  info.get("targetMeanPrice"),
+            "currency":     info.get("currency"),
+        }
+    except Exception as e:
+        print(f"  [ERROR] fundamentals {sym}: {e}", file=sys.stderr)
+        return None
+
+
 def fetch_fx():
     rates = {}
     for pair in FX_PAIRS:
@@ -90,15 +105,17 @@ def fetch_fx():
 def main():
     print(f"=== MSP Portfolio Fetch  {datetime.datetime.utcnow().isoformat()}Z ===\n")
     output = {"generated_at": datetime.datetime.utcnow().isoformat()+"Z",
-              "holdings": HOLDINGS, "ohlc":{}, "quotes":{}, "fx":{}}
+              "holdings": HOLDINGS, "ohlc":{}, "quotes":{}, "fx":{}, "fundamentals":{}}
     print("── FX ──")
     output["fx"] = fetch_fx()
-    print("\n── OHLC + Quotes ──")
+    print("\n── OHLC + Quotes + Fundamentals ──")
     for h in HOLDINGS:
         sym = h["sym"]
         print(f"\n{sym}")
-        output["ohlc"][sym]   = fetch_ohlc(sym)
-        output["quotes"][sym] = fetch_quote(sym)
+        output["ohlc"][sym]         = fetch_ohlc(sym)
+        output["quotes"][sym]       = fetch_quote(sym)
+        output["fundamentals"][sym] = fetch_fundamentals(sym)
+        time.sleep(0.1)
     out = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "docs", "data.json"))
     with open(out, "w") as f:
         json.dump(output, f, separators=(",",":"))
