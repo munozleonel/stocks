@@ -72,6 +72,31 @@ def fetch_quote(sym):
         return None
 
 
+def fetch_fundamentals(sym):
+    try:
+        info = yf.Ticker(sym).info
+        # ETFs report size via totalAssets rather than marketCap; PE/target
+        # generally don't apply to ETFs or crypto, so these come back None.
+        market_cap = info.get("marketCap") or info.get("totalAssets")
+        pe         = info.get("trailingPE")
+        forward_pe = info.get("forwardPE")
+        target     = info.get("targetMeanPrice")
+        fundamentals = {
+            "marketCap":   round(float(market_cap), 2) if market_cap is not None else None,
+            "pe":          round(float(pe), 2)         if pe is not None else None,
+            "forwardPE":   round(float(forward_pe), 2) if forward_pe is not None else None,
+            "priceTarget": round(float(target), 2)     if target is not None else None,
+            "stale": False,
+        }
+        print(f"  {sym:12s} FUND  mktcap={fundamentals['marketCap']}  "
+              f"pe={fundamentals['pe']}  fwdPE={fundamentals['forwardPE']}  "
+              f"target={fundamentals['priceTarget']}")
+        return fundamentals
+    except Exception as e:
+        print(f"  [ERROR] fundamentals {sym}: {e}", file=sys.stderr)
+        return {"marketCap":None, "pe":None, "forwardPE":None, "priceTarget":None, "stale":True}
+
+
 def fetch_fx():
     rates = {}
     for pair in FX_PAIRS:
@@ -90,15 +115,17 @@ def fetch_fx():
 def main():
     print(f"=== MSP Portfolio Fetch  {datetime.datetime.utcnow().isoformat()}Z ===\n")
     output = {"generated_at": datetime.datetime.utcnow().isoformat()+"Z",
-              "holdings": HOLDINGS, "ohlc":{}, "quotes":{}, "fx":{}}
+              "holdings": HOLDINGS, "ohlc":{}, "quotes":{}, "fundamentals":{}, "fx":{}}
     print("── FX ──")
     output["fx"] = fetch_fx()
-    print("\n── OHLC + Quotes ──")
+    print("\n── OHLC + Quotes + Fundamentals ──")
     for h in HOLDINGS:
         sym = h["sym"]
         print(f"\n{sym}")
-        output["ohlc"][sym]   = fetch_ohlc(sym)
-        output["quotes"][sym] = fetch_quote(sym)
+        output["ohlc"][sym]         = fetch_ohlc(sym)
+        output["quotes"][sym]       = fetch_quote(sym)
+        output["fundamentals"][sym] = fetch_fundamentals(sym)
+        time.sleep(0.1)
     out = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "docs", "data.json"))
     with open(out, "w") as f:
         json.dump(output, f, separators=(",",":"))

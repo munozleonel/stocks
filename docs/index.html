@@ -94,6 +94,15 @@
   .stat-value{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--text);}
   .stat-value.profit{color:var(--up);}.stat-value.loss{color:var(--down);}
 
+  /* ── FUNDAMENTALS ROW ── */
+  .fund-stats{padding:9px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.012);}
+  .fund-stat{display:flex;flex-direction:column;gap:3px;}
+  .fund-label{font-size:8.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+  .fund-value{font-family:'Space Mono',monospace;font-size:11.5px;font-weight:700;color:var(--text);}
+  .fund-value.target-up{color:var(--up);}.fund-value.target-down{color:var(--down);}
+  .fund-stale{opacity:.4;}
+  @media(max-width:560px){.fund-stats{grid-template-columns:1fr 1fr;}}
+
   .chart-section{padding:10px 18px 14px;}
   .chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
   .chart-tabs{display:flex;gap:4px;}
@@ -190,6 +199,16 @@ const chartInstances = {};
 const CSYM = {USD:'$',AUD:'A$',EUR:'€'};
 function fmt(v,c){if(v==null||isNaN(v))return'—';return(CSYM[c]||'')+v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtPct(p){if(p==null||isNaN(p))return'';return(p>=0?'+':'')+p.toFixed(2)+'%';}
+function fmtCap(v,c){
+  if(v==null||isNaN(v))return'—';
+  const sym=CSYM[c]||'';
+  const abs=Math.abs(v);
+  if(abs>=1e12)return sym+(v/1e12).toFixed(2)+'T';
+  if(abs>=1e9)return sym+(v/1e9).toFixed(2)+'B';
+  if(abs>=1e6)return sym+(v/1e6).toFixed(1)+'M';
+  return sym+v.toLocaleString();
+}
+function fmtRatio(v){if(v==null||isNaN(v))return'—';if(v<=0||v>900)return'n/m';return v.toFixed(1)+'x';}
 function getFX(from,to){
   if(from===to)return 1;
   const k=from+'_'+to;
@@ -255,6 +274,12 @@ function createCard(h,idx){
       <div class="stat"><div class="stat-label">Shares Held</div><div class="stat-value">${h.shares.toLocaleString(undefined,{maximumFractionDigits:4})}</div></div>
       <div class="stat"><div class="stat-label">Avg Cost</div><div class="stat-value" id="avgcost-${h.sym}">—</div></div>
       <div class="stat"><div class="stat-label">P&amp;L</div><div class="stat-value" id="pnl-${h.sym}">—</div></div>
+    </div>
+    <div class="fund-stats">
+      <div class="fund-stat"><div class="fund-label">Mkt Cap</div><div class="fund-value" id="mktcap-${h.sym}">—</div></div>
+      <div class="fund-stat"><div class="fund-label">P/E</div><div class="fund-value" id="pe-${h.sym}">—</div></div>
+      <div class="fund-stat"><div class="fund-label">Fwd P/E</div><div class="fund-value" id="fpe-${h.sym}">—</div></div>
+      <div class="fund-stat"><div class="fund-label">Price Target</div><div class="fund-value" id="target-${h.sym}">—</div></div>
     </div>
     <div class="chart-section">
       <div class="chart-top">
@@ -327,6 +352,33 @@ function updateCard(h){
   const el=document.getElementById('pnl-'+h.sym);
   el.textContent=fmt(totalPnl,costTo)+' ('+fmtPct(pnlPct)+')';
   el.className='stat-value '+(totalPnl>=0?'profit':'loss');
+
+  // ── Fundamentals (market cap, P/E, forward P/E, analyst price target) ──
+  const f=DATA.fundamentals?.[h.sym]||{};
+  const stale=f.stale===true;
+
+  const mcEl=document.getElementById('mktcap-'+h.sym);
+  if(mcEl){
+    mcEl.textContent=fmtCap(f.marketCap!=null?f.marketCap*fxP:null,to);
+    mcEl.classList.toggle('fund-stale',stale);
+  }
+  const peEl=document.getElementById('pe-'+h.sym);
+  if(peEl){peEl.textContent=fmtRatio(f.pe);peEl.classList.toggle('fund-stale',stale);}
+
+  const fpeEl=document.getElementById('fpe-'+h.sym);
+  if(fpeEl){fpeEl.textContent=fmtRatio(f.forwardPE);fpeEl.classList.toggle('fund-stale',stale);}
+
+  const tgtEl=document.getElementById('target-'+h.sym);
+  if(tgtEl){
+    if(f.priceTarget!=null){
+      const tgt=f.priceTarget*fxP;
+      tgtEl.textContent=fmt(tgt,to);
+      tgtEl.className='fund-value '+(tgt>=price?'target-up':'target-down')+(stale?' fund-stale':'');
+    }else{
+      tgtEl.textContent='—';
+      tgtEl.className='fund-value'+(stale?' fund-stale':'');
+    }
+  }
 }
 
 // ── Pie ───────────────────────────────────────────────────────────────────────
@@ -401,20 +453,76 @@ function buildRegionGroups(){
 
 function setProgress(p,msg){document.getElementById('loaderBar').style.width=p+'%';document.getElementById('loaderStatus').textContent=msg;}
 
+// ── Live refresh config ──────────────────────────────────────────────────────
+// data.json is expected to be regenerated server-side (cron / scheduled function)
+// hitting a market-data API (e.g. Yahoo Finance, IEX, Twelve Data, Alpha Vantage)
+// and should include a `fundamentals` block alongside the existing `quotes` block:
+//
+// {
+//   "generated_at": "2026-08-01T09:31:00Z",
+//   "quotes":       { "AAPL": { "price":301.17, "prev":298.4, "currency":"USD" }, ... },
+//   "fundamentals": { "AAPL": { "marketCap":4900000000000, "pe":38.24,
+//                               "forwardPE":34.84, "priceTarget":321.66,
+//                               "stale":false }, ... },
+//   "ohlc": { ... }
+// }
+//
+// marketCap and priceTarget should be in the same native currency as `quotes[sym].price`
+// (this page converts both using the existing FX table). Set "stale":true on a symbol
+// if its fundamentals couldn't be refreshed on the last API pass — the UI dims it.
+const REFRESH_MS=60000; // how often to silently re-poll data.json
+let refreshTimer=null;
+
+async function fetchData(){
+  const res=await fetch('data.json?t='+Date.now());
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
+function applyData(){
+  if(DATA.generated_at){
+    document.getElementById('updatedBadge').textContent='↻ '+relTime(new Date(DATA.generated_at));
+  }
+  (DATA.holdings||HOLDINGS_FALLBACK).forEach(h=>updateCard(h));
+  buildPie();updateTotal();
+}
+
+// Silent background refresh — re-fetches data.json and updates prices,
+// fundamentals (market cap / P/E / forward P/E / price target) and the
+// pie chart without disturbing scroll position or open chart tabs.
+async function backgroundRefresh(){
+  try{
+    const fresh=await fetchData();
+    DATA=fresh;
+    applyData();
+  }catch(e){
+    console.warn('Background refresh failed:',e.message);
+  }
+}
+
+function startAutoRefresh(){
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(backgroundRefresh,REFRESH_MS);
+  // Pause polling when the tab isn't visible, resume (with an immediate
+  // refresh) when the user comes back to it.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){
+      if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+    }else if(!refreshTimer){
+      backgroundRefresh();
+      refreshTimer=setInterval(backgroundRefresh,REFRESH_MS);
+    }
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init(){
   setProgress(10,'FETCHING DATA.JSON');
   try{
-    const res=await fetch('data.json?t='+Date.now());
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    DATA=await res.json();
+    DATA=await fetchData();
   }catch(e){
     document.getElementById('loadingOverlay').innerHTML=`<div style="text-align:center;font-family:Space Mono,monospace;color:#5a6278;font-size:13px">FAILED TO LOAD DATA<br><span style="color:#ff4d6a;font-size:11px;margin-top:8px;display:block">${e.message}</span></div>`;
     return;
-  }
-
-  if(DATA.generated_at){
-    document.getElementById('updatedBadge').textContent='↻ '+relTime(new Date(DATA.generated_at));
   }
 
   setProgress(30,'BUILDING LAYOUT');
@@ -430,6 +538,9 @@ async function init(){
   });
 
   setProgress(90,'BUILDING PIE');
+  if(DATA.generated_at){
+    document.getElementById('updatedBadge').textContent='↻ '+relTime(new Date(DATA.generated_at));
+  }
   buildPie();updateTotal();
 
   setProgress(100,'READY');
@@ -443,6 +554,9 @@ async function init(){
     setActiveTab(sym,range);
     renderChart(sym,range);
   });
+
+  // Keep prices/fundamentals current without requiring a manual reload
+  startAutoRefresh();
 }
 
 // ── Global range selector ─────────────────────────────────────────────────────
