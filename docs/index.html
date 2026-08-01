@@ -89,10 +89,12 @@
   .price-change.up{color:var(--up);}.price-change.down{color:var(--down);}
 
   .card-stats{padding:10px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;border-bottom:1px solid var(--border);}
+  .card-stats.fundamentals{grid-template-columns:1fr 1fr 1fr 1fr;padding-top:9px;padding-bottom:9px;}
   .stat{display:flex;flex-direction:column;gap:3px;}
   .stat-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
   .stat-value{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--text);}
   .stat-value.profit{color:var(--up);}.stat-value.loss{color:var(--down);}
+  .stat-value.placeholder{color:var(--muted);font-weight:400;}
 
   .chart-section{padding:10px 18px 14px;}
   .chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
@@ -256,6 +258,12 @@ function createCard(h,idx){
       <div class="stat"><div class="stat-label">Avg Cost</div><div class="stat-value" id="avgcost-${h.sym}">—</div></div>
       <div class="stat"><div class="stat-label">P&amp;L</div><div class="stat-value" id="pnl-${h.sym}">—</div></div>
     </div>
+    <div class="card-stats fundamentals">
+      <div class="stat"><div class="stat-label">Market Cap</div><div class="stat-value" id="mcap-${h.sym}">—</div></div>
+      <div class="stat"><div class="stat-label">P/E</div><div class="stat-value" id="pe-${h.sym}">—</div></div>
+      <div class="stat"><div class="stat-label">Fwd P/E</div><div class="stat-value" id="fpe-${h.sym}">—</div></div>
+      <div class="stat"><div class="stat-label">Price Target</div><div class="stat-value" id="pt-${h.sym}">—</div></div>
+    </div>
     <div class="chart-section">
       <div class="chart-top">
         <div class="chart-tabs">
@@ -327,6 +335,28 @@ function updateCard(h){
   const el=document.getElementById('pnl-'+h.sym);
   el.textContent=fmt(totalPnl,costTo)+' ('+fmtPct(pnlPct)+')';
   el.className='stat-value '+(totalPnl>=0?'profit':'loss');
+
+  // ── Fundamentals (marketCap, P/E, forward P/E, price target) ──
+  const f=DATA.fundamentals?.[h.sym];
+  setFund('mcap-'+h.sym, f?.marketCap!=null?fmtMarketCap(f.marketCap,f.currency||priceCur):null);
+  setFund('pe-'+h.sym,   f?.pe!=null?f.pe.toFixed(2):null);
+  setFund('fpe-'+h.sym,  f?.forwardPe!=null?f.forwardPe.toFixed(2):null);
+  setFund('pt-'+h.sym,   f?.priceTarget!=null?fmt(f.priceTarget*getFX(f.currency||priceCur,to),to):null);
+}
+
+function setFund(id,val){
+  const el=document.getElementById(id);if(!el)return;
+  if(val==null){el.textContent='—';el.classList.add('placeholder');}
+  else{el.textContent=val;el.classList.remove('placeholder');}
+}
+
+function fmtMarketCap(v,c){
+  if(v==null||isNaN(v))return null;
+  const sym=CSYM[c]||'';
+  if(v>=1e12)return sym+(v/1e12).toFixed(2)+'T';
+  if(v>=1e9)return sym+(v/1e9).toFixed(2)+'B';
+  if(v>=1e6)return sym+(v/1e6).toFixed(2)+'M';
+  return sym+v.toLocaleString();
 }
 
 // ── Pie ───────────────────────────────────────────────────────────────────────
