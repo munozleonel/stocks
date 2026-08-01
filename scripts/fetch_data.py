@@ -74,17 +74,111 @@ def fetch_quote(sym):
 
 def fetch_fundamentals(sym):
     try:
-        info = yf.Ticker(sym).info
-        return {
+        ticker = yf.Ticker(sym)
+        info = ticker.info
+        result = {
             "marketCap":    info.get("marketCap"),
             "pe":           info.get("trailingPE"),
             "forwardPe":    info.get("forwardPE"),
             "priceTarget":  info.get("targetMeanPrice"),
             "currency":     info.get("currency"),
         }
+        dcf = calc_intrinsic_value(ticker, info)
+        if dcf:
+            result.update(dcf)
+        return result
     except Exception as e:
         print(f"  [ERROR] fundamentals {sym}: {e}", file=sys.stderr)
         return None
+
+
+# ── Buffett-style discounted cash flow ──────────────────────────────────────
+# Simplified two-stage DCF on Free Cash Flow:
+#   1. Take the company's most recent annual Free Cash Flow (FCF).
+#   2. Project it forward DCF_YEARS, fading the growth rate linearly from
+#      its own historical CAGR (clamped 2%-15%, i.e. never assume shrinkage
+#      or hyper-growth) down to a conservative long-run TERMINAL_GROWTH.
+#   3. Add a Gordon Growth terminal value for everything beyond year 10.
+#   4. Discount it all back at DISCOUNT_RATE.
+#   5. Divide by shares outstanding for intrinsic value per share.
+# Only meaningful for real operating businesses with positive FCF — returns
+# None for ETFs, crypto, and anything without a usable cash flow statement.
+DCF_YEARS            = 10
+DCF_DISCOUNT_RATE    = 0.09    # required rate of return
+DCF_TERMINAL_GROWTH  = 0.025   # conservative long-run growth after year 10
+DCF_MIN_GROWTH       = 0.02
+DCF_MAX_GROWTH       = 0.15
+DCF_MARGIN_OF_SAFETY = 0.25    # Graham/Buffett-style discount to fair value
+
+
+def _annual_fcf_series(ticker):
+    """Annual Free Cash Flow values, oldest → newest, or None if unavailable."""
+    try:
+        cf = ticker.cashflow
+        if cf is None or cf.empty:
+            return None
+        row = None
+        if "Free Cash Flow" in cf.index:
+            row = cf.loc["Free Cash Flow"]
+        else:
+            op = next((cf.loc[l] for l in
+                       ("Operating Cash Flow", "Total Cash From Operating Activities")
+                       if l in cf.index), None)
+            capex = next((cf.loc[l] for l in
+                          ("Capital Expenditure", "Capital Expenditures")
+                          if l in cf.index), None)
+            if op is None or capex is None:
+                return None
+            row = op + capex  # capex is stored as a negative number
+        vals = [float(v) for v in row.dropna().tolist()]
+        vals.reverse()  # yfinance columns are newest → oldest; flip to oldest → newest
+        return vals if len(vals) >= 2 else None
+    except Exception:
+        return None
+
+
+def _cagr(vals):
+    first, last = vals[0], vals[-1]
+    years = len(vals) - 1
+    if first <= 0 or last <= 0 or years <= 0:
+        return None
+    return (last / first) ** (1 / years) - 1
+
+
+def calc_intrinsic_value(ticker, info):
+    fcf_series = _annual_fcf_series(ticker)
+    if not fcf_series:
+        return None
+
+    shares = info.get("sharesOutstanding")
+    if not shares:
+        return None
+
+    latest_fcf = fcf_series[-1]
+    if latest_fcf <= 0:
+        return None  # can't meaningfully discount a currently cash-burning business
+
+    growth = _cagr(fcf_series[-min(len(fcf_series), 6):])
+    if growth is None:
+        growth = DCF_TERMINAL_GROWTH
+    growth = max(DCF_MIN_GROWTH, min(DCF_MAX_GROWTH, growth))
+
+    pv_sum, fcf = 0.0, latest_fcf
+    for yr in range(1, DCF_YEARS + 1):
+        # fade the growth rate linearly toward the terminal rate over the projection window
+        g = growth + (DCF_TERMINAL_GROWTH - growth) * (yr - 1) / (DCF_YEARS - 1)
+        fcf *= (1 + g)
+        pv_sum += fcf / ((1 + DCF_DISCOUNT_RATE) ** yr)
+
+    terminal_value = fcf * (1 + DCF_TERMINAL_GROWTH) / (DCF_DISCOUNT_RATE - DCF_TERMINAL_GROWTH)
+    pv_terminal = terminal_value / ((1 + DCF_DISCOUNT_RATE) ** DCF_YEARS)
+
+    intrinsic_per_share = (pv_sum + pv_terminal) / shares
+
+    return {
+        "intrinsicValue":      round(intrinsic_per_share, 2),
+        "marginOfSafetyValue": round(intrinsic_per_share * (1 - DCF_MARGIN_OF_SAFETY), 2),
+    }
 
 
 def fetch_fx():
