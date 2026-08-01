@@ -4,7 +4,7 @@ fetch_data.py  —  fetches OHLC + quotes for MSP Portfolio holdings.
 Writes docs/data.json consumed by the dashboard.
 """
 
-import json, datetime, sys, os, time
+import json, datetime, sys, os, time, math
 import yfinance as yf
 
 HOLDINGS = [
@@ -49,9 +49,12 @@ def fetch_ohlc(sym):
                 result[key] = []; continue
             candles = []
             for ts, row in df.iterrows():
+                o,h,l,c = row["Open"], row["High"], row["Low"], row["Close"]
+                if any(v is None or (isinstance(v,float) and math.isnan(v)) for v in (o,h,l,c)):
+                    continue  # skip incomplete candles (holidays, thin trading, etc.) — NaN is not valid JSON
                 candles.append({"t":int(ts.timestamp()*1000),
-                    "o":round(float(row["Open"]),4), "h":round(float(row["High"]),4),
-                    "l":round(float(row["Low"]),4),  "c":round(float(row["Close"]),4)})
+                    "o":round(float(o),4), "h":round(float(h),4),
+                    "l":round(float(l),4),  "c":round(float(c),4)})
             result[key] = candles
             print(f"  {sym:12s} {key:4s}  {len(candles)} candles")
         except Exception as e:
@@ -64,8 +67,10 @@ def fetch_ohlc(sym):
 def fetch_quote(sym):
     try:
         info = yf.Ticker(sym).fast_info
-        return {"price":round(float(info.last_price),4),
-                "prev":round(float(info.previous_close),4),
+        price, prev = float(info.last_price), float(info.previous_close)
+        if math.isnan(price) or math.isnan(prev):
+            raise ValueError("NaN price/prev returned")
+        return {"price":round(price,4), "prev":round(prev,4),
                 "currency":getattr(info,"currency","USD")}
     except Exception as e:
         print(f"  [ERROR] quote {sym}: {e}", file=sys.stderr)
@@ -211,8 +216,16 @@ def main():
         output["fundamentals"][sym] = fetch_fundamentals(sym)
         time.sleep(0.1)
     out = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "docs", "data.json"))
+    try:
+        # allow_nan=False makes this raise immediately if a NaN ever slips through,
+        # instead of silently writing invalid JSON (JSON has no NaN token) that
+        # breaks JSON.parse() in the browser.
+        json_str = json.dumps(output, separators=(",",":"), allow_nan=False)
+    except ValueError as e:
+        print(f"\n✗ Refused to write data.json — output contains non-finite values: {e}", file=sys.stderr)
+        sys.exit(1)  # leave the last known-good data.json in place rather than overwrite it
     with open(out, "w") as f:
-        json.dump(output, f, separators=(",",":"))
+        f.write(json_str)
     print(f"\n✓ {out}  ({os.path.getsize(out)/1024:.1f} KB)")
 
 if __name__ == "__main__":
