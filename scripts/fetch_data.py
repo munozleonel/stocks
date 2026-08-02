@@ -88,7 +88,7 @@ def fetch_fundamentals(sym):
             "priceTarget":  info.get("targetMeanPrice"),
             "currency":     info.get("currency"),
         }
-        dcf = calc_intrinsic_value(ticker, info)
+        dcf = calc_intrinsic_value(ticker, info, sym)
         if dcf:
             result.update(dcf)
         return result
@@ -116,7 +116,7 @@ DCF_MAX_GROWTH       = 0.15
 DCF_MARGIN_OF_SAFETY = 0.25    # Graham/Buffett-style discount to fair value
 
 
-def _annual_fcf_series(ticker):
+def _annual_fcf_series(ticker, sym):
     """Annual Free Cash Flow values, oldest → newest, or None if unavailable."""
     try:
         cf = ticker.cashflow
@@ -127,18 +127,26 @@ def _annual_fcf_series(ticker):
             row = cf.loc["Free Cash Flow"]
         else:
             op = next((cf.loc[l] for l in
-                       ("Operating Cash Flow", "Total Cash From Operating Activities")
+                       ("Operating Cash Flow", "Total Cash From Operating Activities",
+                        "Cash Flow From Continuing Operating Activities")
                        if l in cf.index), None)
             capex = next((cf.loc[l] for l in
-                          ("Capital Expenditure", "Capital Expenditures")
+                          ("Capital Expenditure", "Capital Expenditures",
+                           "Purchase Of PP And E", "Purchase Of Property Plant And Equipment",
+                           "Net PPE Purchase And Sale")
                           if l in cf.index), None)
             if op is None or capex is None:
+                print(f"  [DIAG] {sym}: no usable OpCF/CapEx rows in cashflow index: "
+                      f"{list(cf.index)[:15]}", file=sys.stderr)
                 return None
             row = op + capex  # capex is stored as a negative number
         vals = [float(v) for v in row.dropna().tolist()]
         vals.reverse()  # yfinance columns are newest → oldest; flip to oldest → newest
+        print(f"  [DIAG] {sym}: annual FCF series (oldest→newest) = "
+              f"{[round(v/1e9,2) for v in vals]}  ($B)", file=sys.stderr)
         return vals if len(vals) >= 2 else None
-    except Exception:
+    except Exception as e:
+        print(f"  [DIAG] {sym}: FCF series fetch failed: {e}", file=sys.stderr)
         return None
 
 
@@ -150,13 +158,14 @@ def _cagr(vals):
     return (last / first) ** (1 / years) - 1
 
 
-def calc_intrinsic_value(ticker, info):
-    fcf_series = _annual_fcf_series(ticker)
+def calc_intrinsic_value(ticker, info, sym):
+    fcf_series = _annual_fcf_series(ticker, sym)
     if not fcf_series:
         return None
 
     shares = info.get("sharesOutstanding")
     if not shares:
+        print(f"  [DIAG] {sym}: no sharesOutstanding in info", file=sys.stderr)
         return None
 
     latest_fcf = fcf_series[-1]
@@ -179,6 +188,22 @@ def calc_intrinsic_value(ticker, info):
     pv_terminal = terminal_value / ((1 + DCF_DISCOUNT_RATE) ** DCF_YEARS)
 
     intrinsic_per_share = (pv_sum + pv_terminal) / shares
+    print(f"  [DIAG] {sym}: latest_fcf=${latest_fcf/1e9:.2f}B growth={growth:.1%} "
+          f"shares={shares/1e9:.2f}B intrinsic=${intrinsic_per_share:.2f}", file=sys.stderr)
+
+    # Sanity guard: a correct DCF can disagree with the market, sometimes a lot —
+    # but a result off by an order of magnitude almost always means a data/unit
+    # mismatch (wrong row picked up, stale period, share-count mismatch, etc.)
+    # rather than a genuine valuation call. Better to show "—" than a bogus number.
+    current_price = info.get("currentPrice") or info.get("regularMarketPrice")
+    if current_price and current_price > 0:
+        ratio = intrinsic_per_share / current_price
+        if ratio < 0.05 or ratio > 20:
+            print(f"  [DIAG] {sym}: REJECTED — intrinsic ${intrinsic_per_share:.2f} vs "
+                  f"price ${current_price:.2f} (ratio {ratio:.2f}x) looks like a data error",
+                  file=sys.stderr)
+            return None
+
 
     return {
         "intrinsicValue":      round(intrinsic_per_share, 2),
